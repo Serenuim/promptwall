@@ -1,29 +1,50 @@
 """PROMPTWALL — Email Service. Prints to terminal if SMTP not configured."""
-import smtplib
 import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import urllib.request
+import urllib.error
+import json
 from config import settings
 
 log = logging.getLogger("promptwall.email")
 
-
 def _send(to: str, subject: str, html: str, plain: str) -> bool:
-    if not settings.SMTP_USER or not settings.SMTP_PASS:
-        log.info(f"\n{'='*60}\n📧 EMAIL (dev mode — SMTP not configured)\nTo: {to}\nSubject: {subject}\n{plain}\n{'='*60}")
+    log.info(f"[EMAIL DEBUG] RESEND_API_KEY set: {bool(settings.RESEND_API_KEY)}, value prefix: {str(settings.RESEND_API_KEY)[:6]!r}")
+# def _send(to: str, subject: str, html: str, plain: str) -> bool:
+    # Dev mode — no credentials set
+    if not settings.RESEND_API_KEY:
+        log.info(
+            f"\n{'='*60}\n📧 EMAIL (dev mode — RESEND_API_KEY not configured)\n"
+            f"To: {to}\nSubject: {subject}\n{plain}\n{'='*60}"
+        )
         return True
+
     try:
-        msg = MIMEMultipart("alternative")
-        msg["From"] = f"PROMPTWALL <{settings.EMAIL_FROM}>"
-        msg["To"] = to
-        msg["Subject"] = subject
-        msg.attach(MIMEText(plain, "plain"))
-        msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as s:
-            s.ehlo(); s.starttls(); s.login(settings.SMTP_USER, settings.SMTP_PASS)
-            s.sendmail(settings.EMAIL_FROM, to, msg.as_string())
-        log.info(f"Email sent to {to}: {subject}")
+        payload = json.dumps({
+            "from": f"PROMPTWALL <{settings.EMAIL_FROM}>",
+            "to": [to],
+            "subject": subject,
+            "html": html,
+            "text": plain,
+        }).encode()
+
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req) as resp:
+            log.info(f"Email sent to {to}: {subject} (id={json.load(resp).get('id')})")
         return True
+
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        log.error(f"Email failed [{e.code}]: {body}")
+        return False
     except Exception as e:
         log.error(f"Email failed: {e}")
         return False

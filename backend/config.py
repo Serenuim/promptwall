@@ -52,7 +52,8 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASS: str = ""
     EMAIL_FROM: str = "noreply@promptwall.io"
-
+    RESEND_API_KEY: str = ""
+    
     # ML Model
     ML_MODEL_PATH: str = "ml_models/promptwall_compressed"
     ML_BLOCK_THRESHOLD: int = 70
