@@ -47,13 +47,9 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     # Email
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASS: str = ""
+    BREVO_API_KEY: str = ""
     EMAIL_FROM: str = "noreply@promptwall.io"
-    RESEND_API_KEY: str = ""
-    
+
     # ML Model
     ML_MODEL_PATH: str = "ml_models/promptwall_compressed"
     ML_BLOCK_THRESHOLD: int = 70

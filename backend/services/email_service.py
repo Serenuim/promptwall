@@ -1,4 +1,4 @@
-"""PROMPTWALL — Email Service. Prints to terminal if SMTP not configured."""
+"""PROMPTWALL — Email Service. Prints to terminal if Brevo not configured."""
 import logging
 import urllib.request
 import urllib.error
@@ -7,38 +7,38 @@ from config import settings
 
 log = logging.getLogger("promptwall.email")
 
+
 def _send(to: str, subject: str, html: str, plain: str) -> bool:
-    log.info(f"[EMAIL DEBUG] RESEND_API_KEY set: {bool(settings.RESEND_API_KEY)}, value prefix: {str(settings.RESEND_API_KEY)[:6]!r}")
-# def _send(to: str, subject: str, html: str, plain: str) -> bool:
-    # Dev mode — no credentials set
-    if not settings.RESEND_API_KEY:
+    log.info(f"[EMAIL DEBUG] Sending from: {settings.EMAIL_FROM} to: {to}")
+    if not settings.BREVO_API_KEY:
         log.info(
-            f"\n{'='*60}\n📧 EMAIL (dev mode — RESEND_API_KEY not configured)\n"
+            f"\n{'='*60}\n📧 EMAIL (dev mode — BREVO_API_KEY not configured)\n"
             f"To: {to}\nSubject: {subject}\n{plain}\n{'='*60}"
         )
         return True
 
     try:
         payload = json.dumps({
-            "from": f"PROMPTWALL <{settings.EMAIL_FROM}>",
-            "to": [to],
+            "sender": {"name": "PROMPTWALL", "email": settings.EMAIL_FROM},
+            "to": [{"email": to}],
             "subject": subject,
-            "html": html,
-            "text": plain,
+            "htmlContent": html,
+            "textContent": plain,
         }).encode()
 
         req = urllib.request.Request(
-            "https://api.resend.com/emails",
+            "https://api.brevo.com/v3/smtp/email",
             data=payload,
             headers={
-                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "api-key": settings.BREVO_API_KEY,
                 "Content-Type": "application/json",
             },
             method="POST",
         )
 
         with urllib.request.urlopen(req) as resp:
-            log.info(f"Email sent to {to}: {subject} (id={json.load(resp).get('id')})")
+            result = json.load(resp)
+            log.info(f"Email sent to {to}: {subject} (id={result.get('messageId')})")
         return True
 
     except urllib.error.HTTPError as e:
